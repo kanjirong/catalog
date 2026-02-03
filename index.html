@@ -7,7 +7,6 @@
 <style>
   body { font-family: sans-serif; padding: 20px; }
 
-  /* 1) 상단 언어 버튼 크기 통일 */
   .lang { display:flex; gap:8px; margin-bottom: 10px; }
   .lang button {
     display:inline-flex;
@@ -52,9 +51,22 @@
   }
 
   .note {
-    margin-top: 10px;
+    margin-top: 8px;
     font-size: 12px;
     color: #666;
+  }
+
+  select {
+    height:38px;
+    border-radius:10px;
+    padding:0 10px;
+    border:1px solid #ccc;
+    background:#fff;
+  }
+
+  .summary {
+    margin-top: 10px;
+    line-height: 1.6;
   }
 
   footer { font-size:12px; color:#666; margin-top:30px; }
@@ -67,7 +79,6 @@
   <button onclick="setLang('en')">English</button>
 </div>
 
-<!-- 4) （相談用） 제거 -->
 <h2 id="title">商品構成選択</h2>
 <p id="desc">ご希望の商品と数量を選択してください。</p>
 
@@ -77,19 +88,29 @@
   <h3 id="cartTitle">選択内容</h3>
   <ul id="cartList"></ul>
 
+  <!-- ✅ 쿠폰: input -> dropdown -->
   <div class="row" style="margin: 10px 0;">
     <span id="couponLabel">クーポン:</span>
-    <input id="coupon" placeholder="optional">
-    <button class="btn secondary" onclick="applyCoupon()" id="applyBtn">適用</button>
+    <select id="couponSelect" onchange="applyCoupon()">
+      <option value="NONE">（選択しない）</option>
+      <option value="LINE05" selected>LINE05（5%OFF）</option>
+      <option value="WELCOME10">WELCOME10（10%OFF）</option>
+    </select>
   </div>
 
-  <strong id="totalText">合計金額: ¥0</strong>
+  <!-- ✅ 첫구매 안내 문구 -->
+  <div class="note" id="welcomeNote">※ 初回購入の場合は「WELCOME10」を選択してください。</div>
 
-  <!-- 5) 배송료 별도 안내(작게) -->
+  <!-- ✅ 소계 / 할인 / 합계 표시 -->
+  <div class="summary">
+    <div><span id="subtotalLabel">小計</span>: <strong id="subtotalText">¥0</strong></div>
+    <div><span id="discountLabel">割引</span>: <strong id="discountText">-¥0</strong></div>
+    <div style="margin-top:6px;"><span id="totalLabel">合計金額</span>: <strong id="totalText">¥0</strong></div>
+  </div>
+
   <div class="note" id="shippingNote">※ 配送料は別途計算されます。</div>
 
   <div style="margin-top: 14px;" class="row">
-    <!-- 6) 영어 버전에서는 영어로 -->
     <button class="btn" onclick="goLine()" id="lineBtn">LINEで相談する</button>
     <button class="btn secondary" onclick="copyOnly()" id="copyBtn">内容をコピー</button>
   </div>
@@ -105,11 +126,8 @@
 
 <script>
 let lang = "jp";
-let discountRate = 1; // 5) line05면 0.95, 아니면 1.0
+let discountRate = 0.95; // ✅ 기본값 LINE05
 
-// 2) 상품 리스트 교체(번호 포함 + 네가 준 이름 그대로)
-// 이미지 파일명은 예시로 images/01.jpg ~ images/17.jpg 로 넣어둠.
-// (8) 실제 파일명/경로에 맞춰 img만 바꾸면 됨.
 const products = [
   { no: 1,  code:"01", name:{ en:"SKIN CARE SET", ja:"ダーマトロジー スキンケアセット" }, price:24200, img:"images/01.jpg" },
   { no: 2,  code:"02", name:{ en:"DUAL CREAM RECOVERY SET", ja:"デュアルクリームリカバリーセット" }, price:33900, img:"images/02.jpg" },
@@ -135,12 +153,14 @@ const text = {
     title: "商品構成選択",
     desc: "ご希望の商品と数量を選択してください。",
     cart: "選択内容",
-    total: "合計金額",
     couponLabel: "クーポン:",
-    apply: "適用",
+    welcome: "※ 初回購入の場合は「WELCOME10」を選択してください。",
+    subtotal: "小計",
+    discount: "割引",
+    total: "合計金額",
     lineBtn: "LINEで相談する",
     copyBtn: "内容をコピー",
-    qtyLabel: "数量", // 3) Qty -> 数量
+    qtyLabel: "数量",
     shipNote: "※ 配送料は別途計算されます。",
     footer: "本ページは参考用のリストです。オンライン注文・決済は行っておりません。",
     copiedHint: "コピーしました。LINEのトークに貼り付けて送信してください。"
@@ -149,10 +169,12 @@ const text = {
     title: "Product Selection",
     desc: "Select products and quantities.",
     cart: "Selected Items",
-    total: "Total",
     couponLabel: "Coupon:",
-    apply: "Apply",
-    lineBtn: "Chat on LINE", // 6) 영어 문구
+    welcome: "If this is your first purchase, choose WELCOME10.",
+    subtotal: "Subtotal",
+    discount: "Discount",
+    total: "Total",
+    lineBtn: "Chat on LINE",
     copyBtn: "Copy details",
     qtyLabel: "Qty",
     shipNote: "Shipping fee will be calculated separately.",
@@ -168,12 +190,19 @@ function setLang(l){
   document.getElementById("title").innerText = text[l].title;
   document.getElementById("desc").innerText = text[l].desc;
   document.getElementById("cartTitle").innerText = text[l].cart;
+
   document.getElementById("couponLabel").innerText = text[l].couponLabel;
-  document.getElementById("applyBtn").innerText = text[l].apply;
+  document.getElementById("welcomeNote").innerText = text[l].welcome;
+
+  document.getElementById("subtotalLabel").innerText = text[l].subtotal;
+  document.getElementById("discountLabel").innerText = text[l].discount;
+  document.getElementById("totalLabel").innerText = text[l].total;
+
   document.getElementById("lineBtn").innerText = text[l].lineBtn;
   document.getElementById("copyBtn").innerText = text[l].copyBtn;
   document.getElementById("shippingNote").innerText = text[l].shipNote;
   document.getElementById("footerText").innerText = text[l].footer;
+
   render();
 }
 
@@ -186,7 +215,8 @@ function render(){
 
     div.innerHTML += `
       <div class="product">
-        <img src="${p.img}" alt="${escapeHtml(p.name[lang==='jp'?'ja':'en'])}" onerror="this.style.opacity=.2; this.alt='(no image)';">
+        <img src="${p.img}" alt="${escapeHtml(p.name[lang==='jp'?'ja':'en'])}"
+             onerror="this.style.opacity=.2; this.alt='(no image)';">
         <div>
           <strong>${p.no}. ${p.name[lang==='jp'?'ja':'en']}</strong><br>
           <span style="opacity:.8;">¥${p.price.toLocaleString()}</span><br><br>
@@ -220,9 +250,7 @@ function getSubtotal(){
 }
 
 function getTotal(){
-  const subtotal = getSubtotal();
-  // 5) line05 -> *0.95
-  return Math.round(subtotal * discountRate);
+  return Math.round(getSubtotal() * discountRate);
 }
 
 function renderCart(){
@@ -234,49 +262,47 @@ function renderCart(){
     const p = products.find(x => x.code === c);
     if (!p) continue;
     const sub = p.price * cart[c];
-    items.push({ no: p.no, name: p.name[lang==='jp'?'ja':'en'], code: c, qty: cart[c], sub });
+    items.push({ no: p.no, name: p.name[lang==='jp'?'ja':'en'], qty: cart[c], sub });
   }
-
   items.sort((a,b)=>a.no-b.no);
 
   items.forEach(it => {
     ul.innerHTML += `<li>${it.no}. ${escapeHtml(it.name)} × ${it.qty} = ¥${it.sub.toLocaleString()}</li>`;
   });
 
+  const subtotal = getSubtotal();
   const total = getTotal();
-  document.getElementById("totalText").innerText =
-    text[lang].total + ": ¥" + total.toLocaleString();
+  const discountAmt = Math.max(0, subtotal - total);
+
+  document.getElementById("subtotalText").innerText = "¥" + subtotal.toLocaleString();
+  document.getElementById("discountText").innerText = "-¥" + discountAmt.toLocaleString();
+  document.getElementById("totalText").innerText = "¥" + total.toLocaleString();
 }
 
-// 5) 쿠폰 line05만 5% 할인
+// ✅ 드롭다운 값에 따라 할인율 변경
 function applyCoupon(){
-  const c = (document.getElementById("coupon").value || "").trim().toLowerCase();
-  discountRate = (c === "line05") ? 0.95 : 1;
+  const v = document.getElementById("couponSelect").value;
+  if (v === "LINE05") discountRate = 0.95;
+  else if (v === "WELCOME10") discountRate = 0.90;
+  else discountRate = 1;
 
   renderCart();
 }
 
-// 7) 버튼 누르면: 선택 내용 "자동으로 메시지 생성 -> 복사 + LINE 열기"
-// 정적 사이트에서도 가능(서버 필요 없음). 고객이 LINE에서 전송 버튼 누르면 네게 도착함.
 async function goLine(){
   const msg = buildMessage();
   await copyToClipboard(msg);
-
-  // 모바일/데스크톱에서 LINE 메시지 작성 화면 열기
   const url = "https://line.me/R/msg/text/?" + encodeURIComponent(msg);
   window.open(url, "_blank");
-
   showCopiedHint();
 }
 
-// 복사만 하고 싶을 때
 async function copyOnly(){
   const msg = buildMessage();
   await copyToClipboard(msg);
   showCopiedHint();
 }
 
-// 메시지 템플릿 생성
 function buildMessage(){
   const items = [];
   for (let c in cart){
@@ -294,17 +320,15 @@ function buildMessage(){
     items.forEach(it => lines.push(`${it.no}. ${it.name} × ${it.qty}`));
   }
 
-  const sel = document.getElementById("couponSelect");
-  const coupon = sel ? sel.value : "NONE";
-  
-  if (coupon && coupon !== "NONE") {
+  const coupon = document.getElementById("couponSelect").value;
+  if (coupon !== "NONE") {
     lines.push((lang==="jp" ? "クーポン: " : "Coupon: ") + coupon);
   }
 
   const subtotal = getSubtotal();
   const total = getTotal();
   const discountAmt = Math.max(0, subtotal - total);
-  
+
   lines.push((lang==="jp" ? "小計: ¥" : "Subtotal: ¥") + subtotal.toLocaleString());
   lines.push((lang==="jp" ? "割引: -¥" : "Discount: -¥") + discountAmt.toLocaleString());
   lines.push((lang==="jp" ? "合計金額: ¥" : "Total: ¥") + total.toLocaleString());
@@ -314,7 +338,6 @@ function buildMessage(){
 }
 
 async function copyToClipboard(textValue){
-  // Clipboard API가 막혀있는 환경 대비
   try {
     await navigator.clipboard.writeText(textValue);
   } catch (e) {
@@ -343,10 +366,10 @@ function escapeHtml(s){
     .replaceAll("'", "&#039;");
 }
 
+// ✅ 초기: JP + LINE05 적용
 setLang("jp");
+applyCoupon();
 </script>
 
 </body>
 </html>
-
-

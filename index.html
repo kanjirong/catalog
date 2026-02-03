@@ -1,94 +1,135 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>개인 상담용 상품 구성 선택</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .product { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
-    .cart { border-top: 2px solid #000; margin-top: 20px; padding-top: 10px; }
-    button { margin-left: 5px; }
-  </style>
+<meta charset="UTF-8">
+<title>Product Selection (Consultation Only)</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+body { font-family: sans-serif; padding: 20px; }
+.lang button { margin-right: 5px; }
+.product { border:1px solid #ddd; padding:10px; margin-bottom:10px; display:flex; gap:10px; }
+.product img { width:100px; height:auto; }
+.cart { border-top:2px solid #000; padding-top:10px; }
+input[type=number]{ width:60px; }
+</style>
 </head>
 <body>
 
-<h2>개인 상담용 상품 구성 선택</h2>
-<p>원하시는 구성을 선택하신 후 LINE으로 상담 요청해 주세요.</p>
+<div class="lang">
+  <button onclick="setLang('jp')">日本語</button>
+  <button onclick="setLang('en')">English</button>
+</div>
+
+<h2 id="title">商品構成選択（相談用）</h2>
+<p id="desc">ご希望の商品と数量を選択してください。</p>
 
 <div id="products"></div>
 
 <div class="cart">
-  <h3>선택한 구성</h3>
+  <h3 id="cartTitle">選択内容</h3>
   <ul id="cartList"></ul>
-  <strong>총 금액: ₩<span id="total">0</span></strong><br><br>
-  <button onclick="goLine()">이 구성으로 상담 요청하기</button>
+  <p>
+    クーポン:
+    <input id="coupon" placeholder="optional">
+    <button onclick="applyCoupon()">適用</button>
+  </p>
+  <strong id="totalText">合計金額: ¥0</strong><br><br>
+  <button onclick="goLine()">LINEで相談する</button>
 </div>
 
+<footer style="font-size:12px;color:#666;margin-top:30px;">
+本ページは個人相談用の参考ページです。オンライン注文・決済は行っておりません。
+</footer>
+
 <script>
+let lang = "jp";
+let discount = 0;
+
+const text = {
+  jp: {
+    title: "商品構成選択（相談用）",
+    desc: "ご希望の商品と数量を選択してください。",
+    cart: "選択内容",
+    total: "合計金額"
+  },
+  en: {
+    title: "Product Selection (Consultation Only)",
+    desc: "Select products and quantities for consultation.",
+    cart: "Selected Items",
+    total: "Estimated Total"
+  }
+};
+
 const products = [
-  { code: "SET-01", name: "기본 스킨케어 세트", price: 24200 },
-  { code: "SET-02", name: "크림 집중 케어 세트", price: 33900 },
-  { code: "SET-03", name: "입문 케어 구성", price: 14500 },
-  { code: "CR-01", name: "보습 크림", price: 9700 },
-  { code: "OM-01", name: "오일 미스트", price: 5700 },
-  { code: "JG-01", name: "진정 젤", price: 5700 },
-  { code: "CL-01", name: "클렌징 오일", price: 4900 },
-  { code: "CL-02", name: "파우더 워시", price: 4900 },
-  { code: "UV-01", name: "자외선 보호", price: 4100 },
-  { code: "MK-01", name: "BB 크림", price: 4600 },
-  { code: "MK-02", name: "멀티 밤", price: 4100 },
-  { code: "FD-21", name: "쿠션 파운데이션 21", price: 8800 },
-  { code: "FD-23", name: "쿠션 파운데이션 23", price: 8800 },
-  { code: "MS-01", name: "콜라겐 마스크", price: 10000 }
+ {code:"SET-01", name:{jp:"基本ケアセット", en:"Basic Care Set"}, price:24200, img:"images/set01.jpg"},
+ {code:"CR-01", name:{jp:"保湿クリーム", en:"Moisture Cream"}, price:9700, img:"images/cr01.jpg"},
+ {code:"MS-01", name:{jp:"コラーゲンマスク", en:"Collagen Mask"}, price:10000, img:"images/ms01.jpg"}
 ];
 
 let cart = {};
 
-const productsDiv = document.getElementById("products");
-
-products.forEach(p => {
-  const div = document.createElement("div");
-  div.className = "product";
-  div.innerHTML = `
-    <strong>${p.code}</strong> – ${p.name}<br>
-    ₩${p.price.toLocaleString()}
-    <button onclick="add('${p.code}')">추가</button>
-  `;
-  productsDiv.appendChild(div);
-});
-
-function add(code) {
-  cart[code] = (cart[code] || 0) + 1;
-  renderCart();
+function setLang(l){
+ lang=l;
+ document.getElementById("title").innerText=text[l].title;
+ document.getElementById("desc").innerText=text[l].desc;
+ document.getElementById("cartTitle").innerText=text[l].cart;
+ render();
 }
 
-function renderCart() {
-  const ul = document.getElementById("cartList");
-  ul.innerHTML = "";
-  let total = 0;
-
-  for (let code in cart) {
-    const product = products.find(p => p.code === code);
-    const qty = cart[code];
-    const price = product.price * qty;
-    total += price;
-
-    const li = document.createElement("li");
-    li.textContent = `${code} × ${qty} = ₩${price.toLocaleString()}`;
-    ul.appendChild(li);
-  }
-
-  document.getElementById("total").textContent = total.toLocaleString();
+function render(){
+ const div=document.getElementById("products");
+ div.innerHTML="";
+ products.forEach(p=>{
+   div.innerHTML+=`
+   <div class="product">
+     <img src="${p.img}">
+     <div>
+       <strong>${p.code}</strong><br>
+       ${p.name[lang]}<br>
+       ¥${p.price.toLocaleString()}<br>
+       Qty:
+       <input type="number" min="1" max="20" value="${cart[p.code]||1}"
+         onchange="updateQty('${p.code}',this.value)">
+     </div>
+   </div>`;
+ });
+ renderCart();
 }
 
-function goLine() {
-  alert("선택하신 구성을 캡처해서 LINE으로 보내주세요 🙂");
+function updateQty(code,val){
+ cart[code]=parseInt(val);
+ renderCart();
 }
+
+function renderCart(){
+ let ul=document.getElementById("cartList");
+ ul.innerHTML="";
+ let total=0;
+ for(let c in cart){
+   let p=products.find(x=>x.code===c);
+   let sub=p.price*cart[c];
+   total+=sub;
+   ul.innerHTML+=`<li>${c} × ${cart[c]} = ¥${sub.toLocaleString()}</li>`;
+ }
+ total=Math.max(0,total-discount);
+ document.getElementById("totalText").innerText=
+   text[lang].total + ": ¥" + total.toLocaleString();
+}
+
+function applyCoupon(){
+ let c=document.getElementById("coupon").value;
+ if(c==="WELCOME5") discount=1000;
+ else discount=0;
+ renderCart();
+}
+
+function goLine(){
+ alert("選択内容をスクリーンショットしてLINEでお送りください。");
+}
+
+setLang("jp");
 </script>
-
-<footer style="margin-top:30px; font-size:12px; color:#666;">
-본 페이지는 개인 상담을 위한 참고용이며 온라인 주문 및 결제는 제공되지 않습니다.
-</footer>
 
 </body>
 </html>
+

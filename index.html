@@ -2,15 +2,62 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Product Selection (Consultation Only)</title>
+<title>Product Selection</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
-body { font-family: sans-serif; padding: 20px; }
-.lang button { margin-right: 5px; }
-.product { border:1px solid #ddd; padding:10px; margin-bottom:10px; display:flex; gap:10px; }
-.product img { width:100px; height:auto; }
-.cart { border-top:2px solid #000; padding-top:10px; }
-input[type=number]{ width:60px; }
+  body { font-family: sans-serif; padding: 20px; }
+
+  /* 1) 상단 언어 버튼 크기 통일 */
+  .lang { display:flex; gap:8px; margin-bottom: 10px; }
+  .lang button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:110px;
+    height:38px;
+    padding:0 12px;
+    border-radius:10px;
+    font-weight:600;
+    line-height:1;
+    border:1px solid #ccc;
+    background:#fff;
+    cursor:pointer;
+  }
+  .lang button:hover { background:#f5f5f5; }
+
+  .product { border:1px solid #ddd; padding:10px; margin-bottom:10px; display:flex; gap:10px; border-radius:12px; }
+  .product img { width:100px; height:auto; border-radius:10px; object-fit:cover; background:#f2f2f2; }
+  .cart { border-top:2px solid #000; padding-top:10px; margin-top: 18px; }
+  input[type=number]{ width:72px; }
+
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    height:38px;
+    padding:0 14px;
+    border-radius:10px;
+    border:1px solid #111;
+    background:#111;
+    color:#fff;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn.secondary {
+    background:#fff;
+    color:#111;
+    border:1px solid #ccc;
+    font-weight:600;
+  }
+
+  .note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #666;
+  }
+
+  footer { font-size:12px; color:#666; margin-top:30px; }
 </style>
 </head>
 <body>
@@ -20,7 +67,8 @@ input[type=number]{ width:60px; }
   <button onclick="setLang('en')">English</button>
 </div>
 
-<h2 id="title">商品構成選択（相談用）</h2>
+<!-- 4) （相談用） 제거 -->
+<h2 id="title">商品構成選択</h2>
 <p id="desc">ご希望の商品と数量を選択してください。</p>
 
 <div id="products"></div>
@@ -28,103 +76,261 @@ input[type=number]{ width:60px; }
 <div class="cart">
   <h3 id="cartTitle">選択内容</h3>
   <ul id="cartList"></ul>
-  <p>
-    クーポン:
+
+  <div class="row" style="margin: 10px 0;">
+    <span id="couponLabel">クーポン:</span>
     <input id="coupon" placeholder="optional">
-    <button onclick="applyCoupon()">適用</button>
-  </p>
-  <strong id="totalText">合計金額: ¥0</strong><br><br>
-  <button onclick="goLine()">LINEで相談する</button>
+    <button class="btn secondary" onclick="applyCoupon()" id="applyBtn">適用</button>
+  </div>
+
+  <strong id="totalText">合計金額: ¥0</strong>
+
+  <!-- 5) 배송료 별도 안내(작게) -->
+  <div class="note" id="shippingNote">※ 配送料は別途計算されます。</div>
+
+  <div style="margin-top: 14px;" class="row">
+    <!-- 6) 영어 버전에서는 영어로 -->
+    <button class="btn" onclick="goLine()" id="lineBtn">LINEで相談する</button>
+    <button class="btn secondary" onclick="copyOnly()" id="copyBtn">内容をコピー</button>
+  </div>
+
+  <div class="note" id="copyHint" style="display:none;">
+    コピーしました。LINEのトークに貼り付けて送信してください。
+  </div>
 </div>
 
-<footer style="font-size:12px;color:#666;margin-top:30px;">
-本ページは個人相談用の参考ページです。オンライン注文・決済は行っておりません。
+<footer id="footerText">
+本ページは参考用のリストです。オンライン注文・決済は行っておりません。
 </footer>
 
 <script>
 let lang = "jp";
-let discount = 0;
+let discountRate = 1; // 5) line05면 0.95, 아니면 1.0
+
+// 2) 상품 리스트 교체(번호 포함 + 네가 준 이름 그대로)
+// 이미지 파일명은 예시로 images/01.jpg ~ images/17.jpg 로 넣어둠.
+// (8) 실제 파일명/경로에 맞춰 img만 바꾸면 됨.
+const products = [
+  { no: 1,  code:"01", name:{ en:"SKIN CARE SET", ja:"ダーマトロジー スキンケアセット" }, price:24200, img:"images/01.jpg" },
+  { no: 2,  code:"02", name:{ en:"DUAL CREAM RECOVERY SET", ja:"デュアルクリームリカバリーセット" }, price:33900, img:"images/02.jpg" },
+  { no: 3,  code:"03", name:{ en:"DERMATOLOGY FIRST PACKAGE", ja:"ダーマトロジー ファースト パッケージ" }, price:14500, img:"images/03.jpg" },
+  { no: 4,  code:"04", name:{ en:"DERMATOLOGY CREAM", ja:"ダーマトロジー クリーム" }, price:9700, img:"images/04.jpg" },
+  { no: 5,  code:"05", name:{ en:"TWO PHASE OIL MIST", ja:"ツーフェーズオイルミスト" }, price:5700, img:"images/05.jpg" },
+  { no: 6,  code:"06", name:{ en:"CALMING BALANCE GEL", ja:"カーミングバランスジェル" }, price:5700, img:"images/06.jpg" },
+  { no: 7,  code:"07", name:{ en:"MOISTURE CLEANSING OIL", ja:"モイスチャークレンジングオイル" }, price:4900, img:"images/07.jpg" },
+  { no: 8,  code:"08", name:{ en:"CLEANSING POWDER WASH", ja:"クレンジングパウダーウォッシュ" }, price:4900, img:"images/08.jpg" },
+  { no: 9,  code:"09", name:{ en:"MOISTURE LAYER SUN PROTECTOR SPF50+ PA++++", ja:"モイスチャー サンプロテクター" }, price:4100, img:"images/09.jpg" },
+  { no: 10, code:"10", name:{ en:"ICD BEAUTY SHEER GLOW BB", ja:"シアグロウBB" }, price:4600, img:"images/10.jpg" },
+  { no: 11, code:"11", name:{ en:"MULTI STICK BALM", ja:"マルチスティックバーム" }, price:4100, img:"images/11.jpg" },
+  { no: 12, code:"12", name:{ en:"ICD CUSHION 21", ja:"クッションファンデー21号" }, price:8800, img:"images/12.jpg" },
+  { no: 13, code:"13", name:{ en:"ICD CUSHION 23", ja:"クッションファンデー23号" }, price:8800, img:"images/13.jpg" },
+  { no: 14, code:"14", name:{ en:"COLLAGEN 100 MELTING MASK", ja:"コラーゲン100 メルティングマスク" }, price:10000, img:"images/14.jpg" },
+  { no: 15, code:"15", name:{ en:"RADIANSOME TONER", ja:"ラディアンソーム トナー" }, price:11100, img:"images/15.jpg" },
+  { no: 16, code:"16", name:{ en:"RADIANSOME ESSENSE", ja:"ラディアンソーム エッセンス" }, price:16900, img:"images/16.jpg" },
+  { no: 17, code:"17", name:{ en:"RADIANSOME CREAM", ja:"ラディアンソーム クリーム" }, price:14300, img:"images/17.jpg" },
+];
 
 const text = {
   jp: {
-    title: "商品構成選択（相談用）",
+    title: "商品構成選択",
     desc: "ご希望の商品と数量を選択してください。",
     cart: "選択内容",
-    total: "合計金額"
+    total: "合計金額",
+    couponLabel: "クーポン:",
+    apply: "適用",
+    lineBtn: "LINEで相談する",
+    copyBtn: "内容をコピー",
+    qtyLabel: "数量", // 3) Qty -> 数量
+    shipNote: "※ 配送料は別途計算されます。",
+    footer: "本ページは参考用のリストです。オンライン注文・決済は行っておりません。",
+    copiedHint: "コピーしました。LINEのトークに貼り付けて送信してください。"
   },
   en: {
-    title: "Product Selection (Consultation Only)",
-    desc: "Select products and quantities for consultation.",
+    title: "Product Selection",
+    desc: "Select products and quantities.",
     cart: "Selected Items",
-    total: "Estimated Total"
+    total: "Total",
+    couponLabel: "Coupon:",
+    apply: "Apply",
+    lineBtn: "Chat on LINE", // 6) 영어 문구
+    copyBtn: "Copy details",
+    qtyLabel: "Qty",
+    shipNote: "Shipping fee will be calculated separately.",
+    footer: "This page is for reference only. No online ordering or payment is processed here.",
+    copiedHint: "Copied. Paste it into LINE chat and send."
   }
 };
 
-const products = [
- {code:"SET-01", name:{jp:"基本ケアセット", en:"Basic Care Set"}, price:24200, img:"images/set01.jpg"},
- {code:"CR-01", name:{jp:"保湿クリーム", en:"Moisture Cream"}, price:9700, img:"images/cr01.jpg"},
- {code:"MS-01", name:{jp:"コラーゲンマスク", en:"Collagen Mask"}, price:10000, img:"images/ms01.jpg"}
-];
-
-let cart = {};
+let cart = {}; // code -> qty
 
 function setLang(l){
- lang=l;
- document.getElementById("title").innerText=text[l].title;
- document.getElementById("desc").innerText=text[l].desc;
- document.getElementById("cartTitle").innerText=text[l].cart;
- render();
+  lang = l;
+  document.getElementById("title").innerText = text[l].title;
+  document.getElementById("desc").innerText = text[l].desc;
+  document.getElementById("cartTitle").innerText = text[l].cart;
+  document.getElementById("couponLabel").innerText = text[l].couponLabel;
+  document.getElementById("applyBtn").innerText = text[l].apply;
+  document.getElementById("lineBtn").innerText = text[l].lineBtn;
+  document.getElementById("copyBtn").innerText = text[l].copyBtn;
+  document.getElementById("shippingNote").innerText = text[l].shipNote;
+  document.getElementById("footerText").innerText = text[l].footer;
+  render();
 }
 
 function render(){
- const div=document.getElementById("products");
- div.innerHTML="";
- products.forEach(p=>{
-   div.innerHTML+=`
-   <div class="product">
-     <img src="${p.img}">
-     <div>
-       <strong>${p.code}</strong><br>
-       ${p.name[lang]}<br>
-       ¥${p.price.toLocaleString()}<br>
-       Qty:
-       <input type="number" min="1" max="20" value="${cart[p.code]||1}"
-         onchange="updateQty('${p.code}',this.value)">
-     </div>
-   </div>`;
- });
- renderCart();
+  const div = document.getElementById("products");
+  div.innerHTML = "";
+
+  products.forEach(p => {
+    const qty = cart[p.code] ?? 0;
+
+    div.innerHTML += `
+      <div class="product">
+        <img src="${p.img}" alt="${escapeHtml(p.name[lang==='jp'?'ja':'en'])}" onerror="this.style.opacity=.2; this.alt='(no image)';">
+        <div>
+          <strong>${p.no}. ${p.name[lang==='jp'?'ja':'en']}</strong><br>
+          <span style="opacity:.8;">¥${p.price.toLocaleString()}</span><br><br>
+
+          ${text[lang].qtyLabel}:
+          <input type="number" min="0" max="20" value="${qty}"
+            onchange="updateQty('${p.code}', this.value)">
+        </div>
+      </div>
+    `;
+  });
+
+  renderCart();
 }
 
-function updateQty(code,val){
- cart[code]=parseInt(val);
- renderCart();
+function updateQty(code, val){
+  const n = Math.max(0, Math.min(20, parseInt(val || "0", 10)));
+  if (n === 0) delete cart[code];
+  else cart[code] = n;
+  renderCart();
+}
+
+function getSubtotal(){
+  let subtotal = 0;
+  for (let c in cart){
+    const p = products.find(x => x.code === c);
+    if (!p) continue;
+    subtotal += p.price * cart[c];
+  }
+  return subtotal;
+}
+
+function getTotal(){
+  const subtotal = getSubtotal();
+  // 5) line05 -> *0.95
+  return Math.round(subtotal * discountRate);
 }
 
 function renderCart(){
- let ul=document.getElementById("cartList");
- ul.innerHTML="";
- let total=0;
- for(let c in cart){
-   let p=products.find(x=>x.code===c);
-   let sub=p.price*cart[c];
-   total+=sub;
-   ul.innerHTML+=`<li>${c} × ${cart[c]} = ¥${sub.toLocaleString()}</li>`;
- }
- total=Math.max(0,total-discount);
- document.getElementById("totalText").innerText=
-   text[lang].total + ": ¥" + total.toLocaleString();
+  const ul = document.getElementById("cartList");
+  ul.innerHTML = "";
+
+  const items = [];
+  for (let c in cart){
+    const p = products.find(x => x.code === c);
+    if (!p) continue;
+    const sub = p.price * cart[c];
+    items.push({ no: p.no, name: p.name[lang==='jp'?'ja':'en'], code: c, qty: cart[c], sub });
+  }
+
+  items.sort((a,b)=>a.no-b.no);
+
+  items.forEach(it => {
+    ul.innerHTML += `<li>${it.no}. ${escapeHtml(it.name)} × ${it.qty} = ¥${it.sub.toLocaleString()}</li>`;
+  });
+
+  const total = getTotal();
+  document.getElementById("totalText").innerText =
+    text[lang].total + ": ¥" + total.toLocaleString();
 }
 
+// 5) 쿠폰 line05만 5% 할인
 function applyCoupon(){
- let c=document.getElementById("coupon").value;
- if(c==="WELCOME5") discount=1000;
- else discount=0;
- renderCart();
+  const c = (document.getElementById("coupon").value || "").trim().toLowerCase();
+  discountRate = (c === "line05") ? 0.95 : 1;
+
+  renderCart();
 }
 
-function goLine(){
- alert("選択内容をスクリーンショットしてLINEでお送りください。");
+// 7) 버튼 누르면: 선택 내용 "자동으로 메시지 생성 -> 복사 + LINE 열기"
+// 정적 사이트에서도 가능(서버 필요 없음). 고객이 LINE에서 전송 버튼 누르면 네게 도착함.
+async function goLine(){
+  const msg = buildMessage();
+  await copyToClipboard(msg);
+
+  // 모바일/데스크톱에서 LINE 메시지 작성 화면 열기
+  const url = "https://line.me/R/msg/text/?" + encodeURIComponent(msg);
+  window.open(url, "_blank");
+
+  showCopiedHint();
+}
+
+// 복사만 하고 싶을 때
+async function copyOnly(){
+  const msg = buildMessage();
+  await copyToClipboard(msg);
+  showCopiedHint();
+}
+
+// 메시지 템플릿 생성
+function buildMessage(){
+  const items = [];
+  for (let c in cart){
+    const p = products.find(x => x.code === c);
+    if (!p) continue;
+    items.push({ no: p.no, name: p.name[lang==='jp'?'ja':'en'], qty: cart[c] });
+  }
+  items.sort((a,b)=>a.no-b.no);
+
+  const lines = [];
+  lines.push(lang === "jp" ? "【ご希望内容】" : "[Request]");
+  if (items.length === 0) {
+    lines.push(lang === "jp" ? "(未選択)" : "(none selected)");
+  } else {
+    items.forEach(it => lines.push(`${it.no}. ${it.name} × ${it.qty}`));
+  }
+
+  const coupon = (document.getElementById("coupon").value || "").trim();
+  if (coupon) lines.push((lang==="jp" ? "クーポン: " : "Coupon: ") + coupon);
+
+  lines.push((lang==="jp" ? "合計金額: ¥" : "Total: ¥") + getTotal().toLocaleString());
+  lines.push(lang === "jp" ? "※ 配送料は別途計算されます。" : "Shipping fee will be calculated separately.");
+
+  return lines.join("\n");
+}
+
+async function copyToClipboard(textValue){
+  // Clipboard API가 막혀있는 환경 대비
+  try {
+    await navigator.clipboard.writeText(textValue);
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = textValue;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+}
+
+function showCopiedHint(){
+  const el = document.getElementById("copyHint");
+  el.innerText = text[lang].copiedHint;
+  el.style.display = "block";
+  setTimeout(()=>{ el.style.display = "none"; }, 3000);
+}
+
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 setLang("jp");
@@ -132,4 +338,5 @@ setLang("jp");
 
 </body>
 </html>
+
 

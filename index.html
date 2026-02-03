@@ -294,10 +294,20 @@ function buildMessage(){
     items.forEach(it => lines.push(`${it.no}. ${it.name} × ${it.qty}`));
   }
 
-  const coupon = (document.getElementById("coupon").value || "").trim();
-  if (coupon) lines.push((lang==="jp" ? "クーポン: " : "Coupon: ") + coupon);
+  const sel = document.getElementById("couponSelect");
+  const coupon = sel ? sel.value : "NONE";
+  
+  if (coupon && coupon !== "NONE") {
+    lines.push((lang==="jp" ? "クーポン: " : "Coupon: ") + coupon);
+  }
 
-  lines.push((lang==="jp" ? "合計金額: ¥" : "Total: ¥") + getTotal().toLocaleString());
+  const subtotal = getSubtotal();
+  const total = getTotal();
+  const discountAmt = Math.max(0, subtotal - total);
+  
+  lines.push((lang==="jp" ? "小計: ¥" : "Subtotal: ¥") + subtotal.toLocaleString());
+  lines.push((lang==="jp" ? "割引: -¥" : "Discount: -¥") + discountAmt.toLocaleString());
+  lines.push((lang==="jp" ? "合計金額: ¥" : "Total: ¥") + total.toLocaleString());
   lines.push(lang === "jp" ? "※ 配送料は別途計算されます。" : "Shipping fee will be calculated separately.");
 
   return lines.join("\n");

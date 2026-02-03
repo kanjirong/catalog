@@ -79,13 +79,13 @@
   <button onclick="setLang('en')">English</button>
 </div>
 
-<h2 id="title">商品構成選択</h2>
+<h2 id="title">注文商品選択</h2>
 <p id="desc">ご希望の商品と数量を選択してください。</p>
 
 <div id="products"></div>
 
 <div class="cart">
-  <h3 id="cartTitle">選択内容</h3>
+  <h3 id="cartTitle">注文内容</h3>
   <ul id="cartList"></ul>
 
   <!-- ✅ 쿠폰: input -> dropdown -->
@@ -154,7 +154,7 @@ const couponRules = {
 
 
 const products = [
-  { no: 1,  code:"01", name:{ en:"SKIN CARE SET", ja:"ダーマトロジー スキンケアセット" }, price:24200, img:"images/01.jpg" },
+  { no: 1,  code:"01", name:{ en:"DERMATOLOGY SKIN CARE SET", ja:"ダーマトロジー スキンケアセット" }, price:24200, img:"images/01.jpg" },
   { no: 2,  code:"02", name:{ en:"DUAL CREAM RECOVERY SET", ja:"デュアルクリームリカバリーセット" }, price:33900, img:"images/02.jpg" },
   { no: 3,  code:"03", name:{ en:"DERMATOLOGY FIRST PACKAGE", ja:"ダーマトロジー ファースト パッケージ" }, price:14500, img:"images/03.jpg" },
   { no: 4,  code:"04", name:{ en:"DERMATOLOGY CREAM", ja:"ダーマトロジー クリーム" }, price:9700, img:"images/04.jpg" },
@@ -191,7 +191,7 @@ const text = {
     copiedHint: "コピーしました。LINEのトークに貼り付けて送信してください。"
   },
   en: {
-    title: "Product Selection",
+    title: "Order List",
     desc: "Select products and quantities.",
     cart: "Selected Items",
     couponLabel: "Coupon:",

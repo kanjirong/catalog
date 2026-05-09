@@ -70,6 +70,32 @@
   }
 
   footer { font-size:12px; color:#666; margin-top:30px; }
+
+  /* premium stock ui */
+.product.soldout{
+opacity:.72;
+background:#fafafa;
+}
+
+.stock-badge{
+display:inline-block;
+margin-top:8px;
+padding:4px 9px;
+border-radius:999px;
+font-size:11px;
+font-weight:700;
+}
+
+.stock-badge.low{
+background:#fff3cd;
+color:#8a6d3b;
+}
+
+.stock-badge.sold{
+background:#999;
+color:#fff;
+}
+
 </style>
 </head>
 <body>
@@ -173,6 +199,28 @@ const products = [
   { no: 17, code:"17", name:{ en:"RADIANSOME CREAM", ja:"ラディアンソーム クリーム" }, price:14300, img:"images/17.jpg" },
 ];
 
+  // 재고 제한 (고객에게 숫자는 표시되지 않음)
+const stock = {
+"01": 0,  // DERMATOLOGY SKIN CARE SET
+"02": 0,  // DUAL CREAM RECOVERY SET
+"03": 6,  // FIRST PACKAGE
+"04": 1,  // CREAM
+"05": 0,  // OIL MIST
+"06": 10, // CALMING BALANCE GEL
+"07": 5,  // CLEANSING OIL
+"08": 5,  // POWDER WASH
+"09": 6,  // SUN PROTECTOR
+"10": 8,  // GLOW BB
+"11": 1,  // MULTI STICK BALM
+"12": 2,  // MOIST CUSHION 21
+"13": 1,  // MOIST CUSHION 23
+"14": 9,  // MELTING MASK
+"15": 4,  // Radiansome TONER
+"16": 3,  // Radiansome ESSENSE
+"17": 4   // Radiansome CREAM
+};
+
+
 const text = {
   jp: {
     title: "商品構成選択",
@@ -188,7 +236,8 @@ const text = {
     qtyLabel: "数量",
     shipNote: "※ 配送料は別途計算されます。",
     footer: "本ページは参考用のリストです。オンライン注文・決済は行っておりません。",
-    copiedHint: "コピーしました。LINEのトークに貼り付けて送信してください。"
+    copiedHint: "コピーしました。LINEのトークに貼り付けて送信してください。",
+    soldout: "SOLD OUT"
   },
   en: {
     title: "Order List",
@@ -204,7 +253,8 @@ const text = {
     qtyLabel: "Qty",
     shipNote: "Shipping fee will be calculated separately.",
     footer: "This page is for reference only. No online ordering or payment is processed here.",
-    copiedHint: "Copied. Paste it into LINE chat and send."
+    copiedHint: "Copied. Paste it into LINE chat and send.",
+    soldout: "SOLD OUT"
   }
 };
 
@@ -234,30 +284,73 @@ function setLang(l){
 }
 
 function render(){
-  const div = document.getElementById("products");
-  div.innerHTML = "";
+const div = document.getElementById("products");
+div.innerHTML = "";
 
-  products.forEach(p => {
-    const qty = cart[p.code] ?? 0;
+products.forEach(p => {
 
-    div.innerHTML += `
-      <div class="product">
-        <img src="${p.img}" alt="${escapeHtml(p.name[lang==='jp'?'ja':'en'])}"
-             onerror="this.style.opacity=.2; this.alt='(no image)';">
-        <div>
-          <strong>${p.no}. ${p.name[lang==='jp'?'ja':'en']}</strong><br>
-          <span style="opacity:.8;">¥${p.price.toLocaleString()}</span><br><br>
+```
+const qty = cart[p.code] ?? 0;
+const maxQty = stock[p.code] ?? 0;
 
-          ${text[lang].qtyLabel}:
-          <input type="number" min="0" max="20" value="${qty}"
-            onchange="updateQty('${p.code}', this.value)">
-        </div>
-      </div>
-    `;
-  });
+let badge = "";
 
-  renderCart();
+// 품절
+if(maxQty === 0){
+  badge = `<span class="stock-badge sold">${text[lang].soldout}</span>`;
 }
+
+// 재고 적음
+else if(maxQty <= 3){
+  badge = `<span class="stock-badge low">${lang==="jp" ? "残りわずか" : "Low Stock"}</span>`;
+}
+
+div.innerHTML += `
+  <div class="product ${maxQty===0 ? 'soldout' : ''}">
+    
+    <img src="${p.img}"
+      alt="${escapeHtml(p.name[lang==='jp'?'ja':'en'])}"
+      onerror="this.style.opacity=.2; this.alt='(no image)';">
+
+    <div>
+      <strong>
+        ${p.no}. ${p.name[lang==='jp'?'ja':'en']}
+      </strong><br>
+
+      <span style="opacity:.8;">
+        ¥${p.price.toLocaleString()}
+      </span><br>
+
+      ${badge}<br><br>
+
+      ${
+        maxQty > 0
+        ? `
+          ${text[lang].qtyLabel}:
+          <input
+            type="number"
+            min="0"
+            max="${maxQty}"
+            value="${qty}"
+            onchange="updateQty('${p.code}', this.value)">
+        `
+        : `
+          <span style="font-size:12px; color:#888;">
+            ${text[lang].soldout}
+          </span>
+        `
+      }
+
+    </div>
+  </div>
+`;
+```
+
+});
+
+renderCart();
+}
+
 
 function updateQty(code, val){
   const n = Math.max(0, Math.min(20, parseInt(val || "0", 10)));

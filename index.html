@@ -196,7 +196,8 @@ const products = [
   { no: 14, code:"14", name:{ en:"COLLAGEN 100 MELTING MASK", ja:"コラーゲン100 メルティングマスク" }, price:10000, img:"images/14.jpg" },
   { no: 15, code:"15", name:{ en:"RADIANSOME TONER", ja:"ラディアンソーム トナー" }, price:11100, img:"images/15.jpg" },
   { no: 16, code:"16", name:{ en:"RADIANSOME ESSENSE", ja:"ラディアンソーム エッセンス" }, price:16900, img:"images/16.jpg" },
-  { no: 17, code:"17", name:{ en:"RADIANSOME CREAM", ja:"ラディアンソーム クリーム" }, price:14300, img:"images/17.jpg" },
+  { no: 17, code:"17", name:{ en:"RADIANSOME CREAM", ja:"ラディアンソーム クリーム" }, price:14300, img:"images/17.jpg" }
+
 ];
 
   // 재고 제한 (고객에게 숫자는 표시되지 않음)
@@ -353,11 +354,21 @@ renderCart();
 
 
 function updateQty(code, val){
-  const n = Math.max(0, Math.min(20, parseInt(val || "0", 10)));
-  if (n === 0) delete cart[code];
-  else cart[code] = n;
-  renderCart();
+const maxQty = stock[code] ?? 0;
+const n = Math.max(
+0,
+Math.min(maxQty, parseInt(val || "0", 10))
+);
+
+  if (n === 0){
+    delete cart[code];
+  } else {
+    cart[code] = n;
+  }
+
+renderCart();
 }
+
 
 function getSubtotal(){
   let subtotal = 0;
